@@ -64,7 +64,7 @@ async function searchSimilarItems(itemName) {
     const cseId = process.env.CSE_ID || 'c6f44c0a865334347';
     console.log(`Searching for: ${itemName}, CSE API Key: ${cseApiKey}, CSE ID: ${cseId}, Environment Loaded: ${!!process.env.CSE_API_KEY}`);
     const response = await axios.get(
-      `https://customsearch.googleapis.com/customsearch/v1?key=${cseApiKey}&cx=${cseId}&q=${encodeURIComponent(itemName)}&searchType=image&num=3`
+      `https://customsearch.googleapis.com/customsearch/v1?key=${cseApiKey}&cx=${cseId}&q=${encodeURIComponent(itemName)}&searchType=image&num=10`
     );
     if (response.data.error) {
       throw new Error(`API Error: ${response.data.error.message || 'Unknown error'}`);
