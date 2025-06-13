@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import Swal from 'sweetalert2';
 
 function App() {
   const [file, setFile] = useState(null);
@@ -23,15 +22,7 @@ function App() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!file) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No File Selected',
-        text: 'Please choose an image to analyze!',
-        confirmButtonColor: '#3498db',
-      });
-      return;
-    }
+    if (!file) return;
 
     setLoading(true);
     const formData = new FormData();
@@ -42,21 +33,9 @@ function App() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setResults(response.data.labels);
-      Swal.fire({
-        icon: 'success',
-        title: 'Analysis Complete',
-        text: 'Image has been analyzed successfully!',
-        confirmButtonColor: '#3498db',
-      });
     } catch (error) {
       console.error('Error analyzing image:', error);
       setResults({ error: 'Failed to analyze image. Check server logs for details.' });
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to analyze image. Please try again.',
-        confirmButtonColor: '#e74c3c',
-      });
     } finally {
       setLoading(false);
     }
@@ -64,7 +43,7 @@ function App() {
 
   return (
     <div className="container mt-5">
-      <div className="card shadow-lg p-4" style={{ borderRadius: '15px', border: '1px solid #3498db', backgroundColor: '#ecf0f1' }}>
+      <div className="card shadow-lg p-4" style={{ borderRadius: '15px', border: '1px solid #3498db' }}>
         <h1 className="text-center mb-4" style={{ color: '#2c3e50', fontFamily: 'Arial, sans-serif' }}>Image Analysis</h1>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -73,7 +52,7 @@ function App() {
               accept="image/*"
               onChange={handleFileChange}
               className="form-control form-control-lg"
-              style={{ borderColor: '#3498db', transition: 'border-color 0.3s', backgroundColor: '#ffffff' }}
+              style={{ borderColor: '#3498db', transition: 'border-color 0.3s' }}
               onFocus={(e) => (e.target.style.borderColor = '#2980b9')}
               onBlur={(e) => (e.target.style.borderColor = '#3498db')}
             />
@@ -113,41 +92,39 @@ function App() {
                 {results.error}
               </div>
             ) : (
-              <div className="row">
+              <div className="list-group">
                 {results.map((item, index) => (
-                  <div key={index} className="col-md-6 col-lg-3 mb-4">
-                    <div className="card h-100 p-3" style={{ borderRadius: '15px', borderLeft: '5px solid #3498db', backgroundColor: '#bdc3c7' }}>
-                      <h5 className="card-title text-center" style={{ color: '#2c3e50' }}>
-                        {item.name} <span className="badge bg-info text-white">Confidence: {item.confidence}</span>
-                      </h5>
-                      <p className="card-text"><strong>Similar:</strong> {item.similar}</p>
-                      <p className="card-text"><strong>Compatible:</strong> {item.compatible.join(', ') || 'None'}</p>
-                      <p className="card-text"><strong>Similar Items:</strong></p>
-                      <div className="d-flex flex-wrap justify-content-center">
-                        {item.similarItems.map((similarItem, i) => (
-                          <a
-                            key={i}
-                            href={similarItem.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="card m-2"
-                            style={{ width: '120px', textDecoration: 'none', color: '#333', transition: 'transform 0.2s' }}
-                            onMouseOver={(e) => (e.target.style.transform = 'scale(1.05)')}
-                            onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
-                          >
-                            <img
-                              src={similarItem.image}
-                              alt={similarItem.title}
-                              className="card-img-top"
-                              style={{ height: '80px', objectFit: 'cover', borderRadius: '5px' }}
-                              onError={(e) => { e.target.src = 'https://via.placeholder.com/120'; e.target.alt = 'Image not available'; }}
-                            />
-                            <div className="card-body p-1">
-                              <p className="card-text text-center" style={{ fontSize: '0.8rem' }}>{similarItem.title}</p>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
+                  <div key={index} className="list-group-item mb-3 p-4 shadow-sm" style={{ borderRadius: '10px', borderLeft: '5px solid #3498db' }}>
+                    <h5 className="mb-2" style={{ color: '#2c3e50' }}>
+                      {item.name} <span className="badge bg-info text-white">Confidence: {item.confidence}</span>
+                    </h5>
+                    <p className="mb-1"><strong>Similar:</strong> {item.similar}</p>
+                    <p className="mb-1"><strong>Compatible:</strong> {item.compatible.join(', ') || 'None'}</p>
+                    <p className="mb-2"><strong>Similar Items:</strong></p>
+                    <div className="d-flex flex-wrap justify-content-center">
+                      {item.similarItems.map((similarItem, i) => (
+                        <a
+                          key={i}
+                          href={similarItem.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="card m-2"
+                          style={{ width: '150px', textDecoration: 'none', color: '#333', transition: 'transform 0.2s' }}
+                          onMouseOver={(e) => (e.target.style.transform = 'scale(1.05)')}
+                          onMouseOut={(e) => (e.target.style.transform = 'scale(1)')}
+                        >
+                          <img
+                            src={similarItem.image}
+                            alt={similarItem.title}
+                            className="card-img-top"
+                            style={{ height: '100px', objectFit: 'cover', borderRadius: '5px' }}
+                            onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; e.target.alt = 'Image not available'; }}
+                          />
+                          <div className="card-body p-2">
+                            <p className="card-text text-center" style={{ fontSize: '0.9rem' }}>{similarItem.title}</p>
+                          </div>
+                        </a>
+                      ))}
                     </div>
                   </div>
                 ))}
