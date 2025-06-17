@@ -10,6 +10,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedItems, setSelectedItems] = useState(new Set());
+  const [searchMode, setSearchMode] = useState('products');
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
@@ -38,23 +39,28 @@ function App() {
     setLoading(true);
     const formData = new FormData();
     formData.append('image', file);
+    formData.append('mode', searchMode);
 
     try {
       const response = await axios.post('http://localhost:5000/analyze-image', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const enhancedResults = response.data.labels.map(item => ({
-        ...item,
-        similarItems: item.similarItems.map(si => ({
-          ...si,
-          confidence: si.confidence || (Math.random() * 0.8 + 0.1),
-          price: `${(Math.random() * 20 + 10).toFixed(2)}-${(Math.random() * 30 + 20).toFixed(2)}`,
-          orders: Math.floor(Math.random() * 10),
-          rating: Math.random() * 5,
-          special: Math.random() > 0.7 ? 'USE YOUR OWN COLORS & DESIGNS' : '',
-        }))
-      }));
-      setResults(enhancedResults);
+      if (searchMode === 'images') {
+        setResults({ images: response.data.images });
+      } else {
+        const enhancedResults = response.data.labels.map(item => ({
+          ...item,
+          similarItems: item.similarItems.map(si => ({
+            ...si,
+            confidence: si.confidence ? parseFloat(si.confidence) / 100 : (Math.random() * 0.8 + 0.1),
+            price: `${(Math.random() * 20 + 10).toFixed(2)}-${(Math.random() * 30 + 20).toFixed(2)}`,
+            orders: Math.floor(Math.random() * 10),
+            rating: Math.random() * 5,
+            special: Math.random() > 0.7 ? 'USE YOUR OWN COLORS & DESIGNS' : '',
+          })).sort((a, b) => (b.confidence || 0) - (a.confidence || 0)) // เรียงลำดับตาม confidence จากมากไปน้อย
+        }));
+        setResults(enhancedResults);
+      }
       setSelectedItems(new Set());
       Swal.fire({
         icon: 'success',
@@ -94,8 +100,8 @@ function App() {
   };
 
   const handleBatchSelect = () => {
-    if (results && results[0]?.similarItems) {
-      const allIndices = new Set(results[0].similarItems.map((_, i) => i));
+    if (results && (results[0]?.similarItems || results.images)) {
+      const allIndices = new Set((results[0]?.similarItems || results.images).map((_, i) => i));
       setSelectedItems(allIndices);
     }
   };
@@ -105,9 +111,10 @@ function App() {
   };
 
   const handleOpenAll = () => {
-    if (results && results[0]?.similarItems) {
-      results[0].similarItems.forEach((item, i) => {
-        if (item.link && selectedItems.has(i)) {
+    if (results && (results[0]?.similarItems || results.images)) {
+      const items = results[0]?.similarItems || results.images;
+      items.forEach((item, i) => {
+        if (item.link && item.link !== '#' && selectedItems.has(i)) {
           window.open(item.link, '_blank');
         }
       });
@@ -115,8 +122,15 @@ function App() {
   };
 
   const handleCardClick = (item, index) => {
-    if (item.link) {
+    if (item.link && item.link !== '#') {
       window.open(item.link, '_blank');
+    } else {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Product Link',
+        text: 'This item does not have a valid product page link.',
+        confirmButtonColor: '#3498db',
+      });
     }
   };
 
@@ -145,6 +159,31 @@ function App() {
                 />
               </div>
             )}
+            <div className="mb-3">
+              <h6 style={{ color: '#3498db', fontWeight: 'bold' }}>Search Mode</h6>
+              <div className="form-check mb-1">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name="searchMode"
+                  id="products"
+                  checked={searchMode === 'products'}
+                  onChange={() => setSearchMode('products')}
+                />
+                <label className="form-check-label" htmlFor="products" style={{ color: '#ffffff' }}>Find Products</label>
+              </div>
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name="searchMode"
+                  id="images"
+                  checked={searchMode === 'images'}
+                  onChange={() => setSearchMode('images')}
+                />
+                <label className="form-check-label" htmlFor="images" style={{ color: '#ffffff' }}>Find Images</label>
+              </div>
+            </div>
             <div className="d-flex justify-content-between mb-3 align-items-center">
               <button
                 onClick={handleStartOver}
@@ -162,21 +201,14 @@ function App() {
                 />
               </div>
             </div>
-            <div className="mb-3">
-              <h6 style={{ color: '#3498db', fontWeight: 'bold' }}>Rating</h6>
-              <div className="form-check mb-1">
-                <input className="form-check-input" type="radio" name="rating" id="any" defaultChecked />
-                <label className="form-check-label" htmlFor="any" style={{ color: '#ffffff' }}>Any</label>
+            {results && results[0]?.name && (
+              <div className="mb-3">
+                <h6 style={{ color: '#3498db', fontWeight: 'bold' }}>Detected Labels</h6>
+                <p style={{ fontSize: '0.8rem', color: '#ffffff' }}>
+                  {results.map((result, index) => `${result.name} (${result.confidence})`).join(', ')}
+                </p>
               </div>
-              <div className="form-check mb-1">
-                <input className="form-check-input" type="radio" name="rating" id="high" />
-                <label className="form-check-label" htmlFor="high" style={{ color: '#ffffff' }}>High</label>
-              </div>
-              <div className="form-check">
-                <input className="form-check-input" type="radio" name="rating" id="veryHigh" />
-                <label className="form-check-label" htmlFor="veryHigh" style={{ color: '#ffffff' }}>Very High</label>
-              </div>
-            </div>
+            )}
             <button
               type="button"
               onClick={handleSubmit}
@@ -194,7 +226,7 @@ function App() {
           <div className="col-md-8 p-3">
             <div className="d-flex justify-content-between align-items-center mb-3 w-100" style={{ background: 'linear-gradient(90deg, #3498db, #2c3e50)', padding: '8px', borderRadius: '10px', boxShadow: '0 0 10px rgba(52, 152, 219, 0.5)' }}>
               <span style={{ fontWeight: 'bold' }}>{selectedItems.size} Selected</span>
-              <span style={{ fontWeight: 'bold' }}>40 Results</span>
+              <span style={{ fontWeight: 'bold' }}>{(results?.[0]?.similarItems || results?.images)?.length || 0} Results</span>
               <div>
                 <select className="form-select form-select-sm me-2" style={{ backgroundColor: '#2c2c2c', color: '#ffffff', borderColor: '#3498db', borderRadius: '5px', width: '120px' }}>
                   <option>Relevancy</option>
@@ -206,13 +238,13 @@ function App() {
               </div>
             </div>
             {results && !results.error && (
-              <div className="row flex-wrap g-3">
-                {results[0]?.similarItems.map((similarItem, i) => (
-                  <div key={i} className="col-12 col-md-3">
+              <div className="row flex-wrap g-2" style={{ justifyContent: 'flex-start' }}>
+                {(results[0]?.similarItems || results.images)?.map((item, i) => (
+                  <div key={i} className="col-6 col-md-3 col-lg-2 p-1">
                     <div
                       className="card h-100 card-hover"
-                      style={{ borderRadius: '12px', backgroundColor: '#333333', border: selectedItems.has(i) ? '2px solid #3498db' : '1px solid #444444', transition: 'all 0.3s ease', cursor: similarItem.link ? 'pointer' : 'default' }}
-                      onClick={() => handleCardClick(similarItem, i)}
+                      style={{ borderRadius: '12px', backgroundColor: '#333333', border: selectedItems.has(i) ? '2px solid #3498db' : '1px solid #444444', transition: 'all 0.3s ease', cursor: item.link && item.link !== '#' ? 'pointer' : 'default' }}
+                      onClick={() => handleCardClick(item, i)}
                     >
                       <div className="card-checkbox">
                         <input
@@ -223,23 +255,30 @@ function App() {
                         />
                       </div>
                       <img
-                        src={similarItem.image || `https://via.placeholder.com/150?text=Item+${i+1}`}
-                        alt={similarItem.title}
+                        src={item.image || `https://via.placeholder.com/150?text=Item+${i+1}`}
+                        alt={item.title}
                         className="card-img-top"
-                        style={{ height: '180px', objectFit: 'cover', borderRadius: '12px 12px 0 0' }}
+                        style={{ height: '120px', objectFit: 'cover', borderRadius: '12px 12px 0 0' }}
                         onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; e.target.alt = 'Image not available'; }}
                       />
-                      <div className="card-body p-2 text-center" style={{ backgroundColor: '#2c2c2c', color: '#ffffff' }}>
-                        <p className="card-text" style={{ fontSize: '0.95rem', marginBottom: '2px', fontWeight: '500' }}>{similarItem.title || `Item ${i + 1}`}</p>
-                        <p className="card-text" style={{ fontSize: '0.9rem', marginBottom: '2px', color: '#ff6f61' }}><strong>${similarItem.price}</strong></p>
-                        <p className="card-text" style={{ fontSize: '0.8rem', marginBottom: '2px', color: '#bdc3c7' }}>{similarItem.orders} Orders</p>
-                        <div className="text-warning" style={{ fontSize: '0.85rem' }}>
-                          {'★'.repeat(Math.floor(similarItem.rating)) + '☆'.repeat(5 - Math.floor(similarItem.rating))}
-                        </div>
-                        {similarItem.special && (
-                          <p className="text-danger" style={{ fontSize: '0.8rem', marginTop: '2px', fontStyle: 'italic' }}>{similarItem.special}</p>
+                      <div className="card-body p-1 text-center" style={{ backgroundColor: '#2c2c2c', color: '#ffffff' }}>
+                        <p className="card-text" style={{ fontSize: '0.75rem', marginBottom: '1px', fontWeight: '500' }}>{item.title || `Item ${i + 1}`}</p>
+                        {searchMode === 'products' && (
+                          <>
+                            <p className="card-text" style={{ fontSize: '0.7rem', marginBottom: '1px', color: '#ff6f61' }}><strong>${item.price}</strong></p>
+                            <p className="card-text" style={{ fontSize: '0.6rem', marginBottom: '1px', color: '#bdc3c7' }}>{item.orders} Orders</p>
+                            <div className="text-warning" style={{ fontSize: '0.65rem' }}>
+                              {'★'.repeat(Math.floor(item.rating)) + '☆'.repeat(5 - Math.floor(item.rating))}
+                            </div>
+                            {item.special && (
+                              <p className="card-text text-danger" style={{ fontSize: '0.6rem', marginTop: '1px', fontStyle: 'italic' }}>{item.special}</p>
+                            )}
+                          </>
                         )}
-                        <p className="text-info" style={{ fontSize: '0.7rem' }}>Match: {(similarItem.confidence * 100).toFixed(2)}%</p>
+                        <p className="text-info" style={{ fontSize: '0.6rem' }}>Match: {(item.confidence * 100).toFixed(2)}%</p>
+                        {results[0]?.visionConfidence && (
+                          <p className="text-success" style={{ fontSize: '0.6rem', marginTop: '1px' }}>Vision Search: {results[0].visionConfidence}%</p>
+                        )}
                       </div>
                     </div>
                   </div>

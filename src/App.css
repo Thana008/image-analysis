@@ -7,7 +7,7 @@
 
 .card-hover:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.7);
   background: linear-gradient(135deg, #333333, #3d3d3d);
 }
 
@@ -39,4 +39,29 @@
 
 .btn-primary:active {
   animation: pulse 0.3s ease;
+}
+
+.row.flex-wrap {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.col-6, .col-md-3, .col-lg-2 {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (min-width: 768px) {
+  .col-md-3 {
+    width: 25%;
+    max-width: 25%;
+  }
+}
+
+@media (min-width: 992px) {
+  .col-lg-2 {
+    width: 16.6667%;
+    max-width: 16.6667%;
+  }
 }
